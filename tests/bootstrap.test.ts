@@ -75,6 +75,28 @@ describe("bootstrap assembly", () => {
     await harness.shutdown();
   });
 
+  it("exposes skills by index and registers load_skill only when one exists", async () => {
+    // No skills: the seven built-ins stay alone and no Skills section appears.
+    const bare = await makeHarness();
+    expect(bare.harness.tools.names()).not.toContain("load_skill");
+    expect(bare.harness.runtime.agent.state.systemPrompt).not.toContain("## Skills");
+    await bare.harness.shutdown();
+
+    // With a skill: one-line index in the prompt, body kept out, tool registered.
+    const dir = path.join(root, ".tinycode", "skills", "code-review");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, "SKILL.md"),
+      "---\nname: code-review\ndescription: Review code changes.\n---\n# instructions\nSecret body line.\n",
+    );
+    const withSkill = await makeHarness();
+    const prompt = withSkill.harness.runtime.agent.state.systemPrompt;
+    expect(prompt).toContain("- code-review: Review code changes.");
+    expect(prompt).not.toContain("Secret body line.");
+    expect(withSkill.harness.tools.names()).toContain("load_skill");
+    await withSkill.harness.shutdown();
+  });
+
   it("registers the session from message one", async () => {
     const { harness, faux } = await makeHarness();
     faux.setResponses([fauxAssistantMessage("hello there")]);

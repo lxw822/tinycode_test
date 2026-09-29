@@ -107,7 +107,8 @@ src/
 ├── model/       registry (resolution order), offline mock scripts
 ├── permissions/ classifier, rules, manager (3-layer verdicts)
 ├── session/     JSONL storage, attach/resume, TINYCODE_HOME
-└── tools/       read, write, edit, bash, grep, find, ls
+├── skills/      discovery + frontmatter index (progressive disclosure)
+└── tools/       read, write, edit, bash, grep, find, ls, load_skill
 ```
 
 ### Tools
@@ -117,8 +118,28 @@ src/
 | `read` / `write` / `edit` | Path-guarded: `realpath` checked on both sides, outputs use `/` |
 | `bash`                    | Timeout + abort handled by process-tree kill (Windows-aware)    |
 | `grep` / `find` / `ls`    | Read-only project inspection                                    |
+| `load_skill`              | Loads a skill by name (never a path) — see below                |
 
 Every tool resolves paths against the project root and rejects escapes (symlinks included).
+
+### Skills
+
+Drop a `SKILL.md` into `.tinycode/skills/<name>/` (project) or `~/.tinycode/skills/<name>/`
+(user-level; a project skill with the same name wins):
+
+```markdown
+---
+name: code-review
+description: Review code changes for correctness and maintainability.
+---
+
+# instructions…
+```
+
+Only the `name: description` line reaches the system prompt. When the model judges a skill
+relevant it calls `load_skill(name)` and the full body arrives as a tool result — unused skills
+cost zero context tokens. Discovery never lets a malformed file break boot, and the tool resolves
+names against the discovery-time map, so there is no path to traverse.
 
 ## Offline testing
 
@@ -157,10 +178,11 @@ npm run format           # Prettier
 
 ## Status
 
-Core slice complete: tools, permissions, context, sessions, model routing, headless CLI, and an
-end-to-end test that drives a scripted model through the real loop to fix a broken fixture project.
+Core slice complete: tools, permissions, context, sessions, model routing, headless CLI, skills
+(progressive disclosure), and an end-to-end test that drives a scripted model through the real
+loop to fix a broken fixture project.
 
-Planned: interactive TUI, skills, MCP, sub-agents.
+Planned: interactive TUI, MCP, sub-agents.
 
 ## Acknowledgements
 

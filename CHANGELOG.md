@@ -9,8 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Skills** (`.tinycode/skills/<name>/SKILL.md`, user-level mirror in the data home): discovery
+  with frontmatter parsing, one-line-per-skill system-prompt index, and a `load_skill` tool that
+  resolves names against the discovery map (no path input, auto-allowed as read-only). Malformed
+  skills never break boot; project skills shadow user-level ones.
 - Interactive TUI (planned)
-- Skills, MCP, sub-agents (planned)
+- MCP, sub-agents (planned)
 
 ## [1.0.0] - 2026-09-29
 

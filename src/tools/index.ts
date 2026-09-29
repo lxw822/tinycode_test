@@ -12,6 +12,8 @@ export { createFindTool, globToRegExp } from "./find.js";
 export type { FindParams, FindToolDetails } from "./find.js";
 export { createLsTool } from "./ls.js";
 export type { LsParams, LsEntry, LsToolDetails } from "./ls.js";
+export { createLoadSkillTool, LoadSkillParams } from "./load-skill.js";
+export type { LoadSkillDetails } from "./load-skill.js";
 export {
   resolveWorkspacePath,
   isInsideWorkspace,

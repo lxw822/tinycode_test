@@ -16,8 +16,10 @@ import {
   createLsTool,
   createReadTool,
   createWriteTool,
+  createLoadSkillTool,
 } from "./tools/index.js";
 import { ToolRegistry } from "./tools/registry.js";
+import { discoverSkills, skillIndex } from "./skills/discovery.js";
 import type { TinyCodeConfig } from "./config/schema.js";
 import { ModelRegistry, type ModelRef } from "./model/registry.js";
 
@@ -120,12 +122,17 @@ export async function bootstrapHarness(options: BootstrapOptions): Promise<Harne
   ];
   for (const factory of factories) tools.register(factory(projectRoot));
 
+  // --- Skills (progressive disclosure, ARCHITECTURE §8) --------------------
+  const skills = discoverSkills(projectRoot);
+  if (skills.length > 0) tools.register(createLoadSkillTool(skills));
+
   // --- System prompt -------------------------------------------------------
   const memory = readProjectMemory(projectRoot);
   const systemPrompt = buildSystemPrompt({
     projectRoot,
     platform: `${os.platform()} ${os.arch()} · node ${process.version}`,
     memory,
+    skills: skillIndex(skills),
   });
 
   const summarize = makeDefaultSummarizer(models, model);

@@ -83,6 +83,12 @@ export function evaluateToolCall(
     return { action: "ask", reason: "searches a path outside the project", pattern: toolName };
   }
 
+  if (toolName === "load_skill") {
+    // Name-only lookup against the discovery-time map — no path comes from
+    // the model, so there is nothing outside the workspace to reach.
+    return { action: "allow", reason: "loads a skill by name", risk: "safe" };
+  }
+
   // Unknown tools (MCP, sub-agents, future additions) never auto-allow.
   return { action: "ask", reason: `unrecognized tool "${toolName}"`, pattern: toolName };
 }
