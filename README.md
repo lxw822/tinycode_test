@@ -1,5 +1,8 @@
 # TinyCode
 
+[![CI](https://github.com/lxw822/tinycode_test/actions/workflows/ci.yml/badge.svg)](https://github.com/lxw822/tinycode_test/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A minimal but complete **coding agent harness** — learn how coding agents work by reading one.
 
 TinyCode is a clean-room reproduction built on the [Pi](https://github.com/earendil-works) agent
@@ -158,6 +161,17 @@ Core slice complete: tools, permissions, context, sessions, model routing, headl
 end-to-end test that drives a scripted model through the real loop to fix a broken fixture project.
 
 Planned: interactive TUI, skills, MCP, sub-agents.
+
+## Acknowledgements
+
+This is an independent, clean-room reimplementation inspired by
+[helsome/tinycode](https://github.com/helsome/tinycode). The architecture follows that project's
+`ARCHITECTURE.md`; no source code or tests from the original were used. It is not affiliated with
+or endorsed by the original author.
+
+The agent loop itself is built on the [Pi](https://github.com/earendil-works/pi) framework
+(`pi-agent-core`, `pi-ai`) — TinyCode contributes the harness around it: tools, permissions,
+context, sessions, and model routing.
 
 ## License
 
