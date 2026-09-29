@@ -1,0 +1,40 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+
+- Interactive TUI (planned)
+- Skills, MCP, sub-agents (planned)
+
+## [1.0.0] - 2026-09-29
+
+### Added
+
+- **Tools**: `read`, `write`, `edit`, `bash`, `grep`, `find`, `ls` with project-root path guards
+  (dual `realpath` symlink escape check, forward-slash output paths).
+- **Permissions**: three-layer verdicts — hard deny → rules → ask path; headless runs default to
+  deny when no dialog is available; `--permission-mode auto` as the explicit unattended opt-in.
+- **Context management**: tool-output truncation, artifact offload, auto-compaction with a
+  summarizer injected via hook.
+- **Sessions**: JSONL transcript storage with torn-line self-healing on append, `--session`/`-c`
+  resume, `TINYCODE_HOME` data-directory override.
+- **Model registry**: resolution order `--model` > `TINYCODE_MODEL` > config > first
+  auth-configured provider; explicit `enableMock()` registers Pi's offline faux provider so an
+  ambient API key can never shadow it.
+- **Bootstrap**: five injected hooks separate policy from the core loop.
+- **CLI**: headless `-p` one-shot mode, `--help`/`--version`, argument validation with exit code 2.
+- **Offline mock scripting**: `TINYCODE_MOCK_SCRIPT` JSON files drive the real agent loop with no
+  network.
+
+### Engineering
+
+- ESLint 9 (flat config) + Prettier, `npm run check` aggregate gate.
+- 141 tests across 9 files; coverage ~88% lines (`npm run test:coverage`).
+- GitHub Actions CI (Windows/Ubuntu × Node 22/24).
+- `npm pack` limited to `dist/` (60 files); `prepublishOnly` runs the full check + build.

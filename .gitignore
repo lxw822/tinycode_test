@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Coverage / test artifacts
+coverage/
+*.tsbuildinfo
+
+# Editor / OS noise
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local env & scratch
+.env
+.env.*
+*.log
+
+# Pack tarballs
+*.tgz
+
+# Local agent tooling (skills installed into this workspace)
+.agents/
+skills-lock.json
