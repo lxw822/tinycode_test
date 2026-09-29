@@ -13,6 +13,14 @@
   "files": [
     "dist"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lxw822/tinycode_test.git"
+  },
+  "homepage": "https://github.com/lxw822/tinycode_test#readme",
+  "bugs": {
+    "url": "https://github.com/lxw822/tinycode_test/issues"
+  },
   "keywords": [
     "ai",
     "agent",
