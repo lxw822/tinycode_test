@@ -64,7 +64,11 @@ describe("path guard (double realpath)", () => {
   });
 
   it("rejects absolute paths outside the project", () => {
-    expect(() => resolveWorkspacePath(root, "C:\\Windows\\win.ini")).toThrow(WorkspacePathError);
+    // Platform-neutral: `path.parse(root).root` is `C:\` on Windows and `/`
+    // on POSIX, so this is an absolute path outside the project on both.
+    const outside = path.join(path.parse(root).root, "tinycode-outside-probe.txt");
+    expect(path.isAbsolute(outside)).toBe(true);
+    expect(() => resolveWorkspacePath(root, outside)).toThrow(WorkspacePathError);
   });
 
   it("allows a new (not yet existing) file inside the project", () => {

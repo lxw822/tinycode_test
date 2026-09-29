@@ -37,6 +37,11 @@ const HEAD_SHARE = 0.6;
  * On Windows `child.kill()` only terminates the cmd.exe wrapper; grandchildren
  * (the actual node/python process) keep the stdio pipes open, so `close` never
  * fires and timeouts hang. `taskkill /T` walks the tree.
+ *
+ * POSIX has the mirror-image problem: `sh -c` forks the real command, killing
+ * only `sh` leaves the grandchild holding the pipes. The spawn uses
+ * `detached: true` (POSIX only) so the child leads its own process group, and
+ * `kill(-pid)` signals the whole group.
  */
 function killTree(child: ReturnType<typeof spawn>, sig: NodeJS.Signals): void {
   if (child.pid === undefined) return;
@@ -55,9 +60,14 @@ function killTree(child: ReturnType<typeof spawn>, sig: NodeJS.Signals): void {
     return;
   }
   try {
-    child.kill(sig);
+    process.kill(-child.pid, sig);
   } catch {
-    // already gone
+    // Group already gone (or not group leader) — fall back to the direct kill.
+    try {
+      child.kill(sig);
+    } catch {
+      // already gone
+    }
   }
 }
 
@@ -93,6 +103,10 @@ export function createBashTool(projectRoot: string): AgentTool<typeof BashParams
             cwd,
             shell: true,
             windowsHide: true,
+            // POSIX only: give the child its own process group so killTree can
+            // signal the whole tree with kill(-pid). On Windows `detached`
+            // would spawn a new console window — taskkill handles the tree.
+            detached: process.platform !== "win32",
             stdio: ["ignore", "pipe", "pipe"],
           });
         } catch (error) {
