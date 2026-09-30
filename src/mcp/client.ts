@@ -163,6 +163,8 @@ export class McpManager {
     client: Client,
   ): AgentTool<any> {
     const originalName = mcpTool.name;
+    // The MCP SDK already validates `inputSchema` as `{ type: "object" }`, so
+    // this is guaranteed to be an object-rooted schema by the time it lands here.
     const parameters = (mcpTool.inputSchema ?? { type: "object", properties: {} }) as TSchema;
     return {
       name: toolName,

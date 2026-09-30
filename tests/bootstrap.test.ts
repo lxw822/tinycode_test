@@ -76,6 +76,19 @@ describe("bootstrap assembly", () => {
     await harness.shutdown();
   });
 
+  it("gives every registered tool an object-rooted parameter schema", async () => {
+    // Providers reject a tool whose root schema isn't `type: "object"` with an
+    // HTTP 400 — and that 400 aborts the *whole* request, so one bad schema
+    // (a bare `{}` is the natural thing to reach for on a no-argument tool)
+    // breaks every other tool too. Catch it here instead of at the API.
+    const { harness } = await makeHarness();
+    for (const name of harness.tools.names()) {
+      const parameters = harness.tools.get(name)?.parameters as { type?: unknown } | undefined;
+      expect(parameters?.type, `tool ${name}`).toBe("object");
+    }
+    await harness.shutdown();
+  });
+
   it("builds a system prompt with environment and project memory", async () => {
     fs.writeFileSync(path.join(root, "TINY.md"), "# Tests run with npm test");
     const { harness } = await makeHarness();

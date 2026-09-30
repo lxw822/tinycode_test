@@ -1,6 +1,11 @@
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import type { SubAgentManager, SubAgentRecord } from "./manager.js";
-import { SpawnAgentParams, SubAgentIdParams, WaitAgentParams } from "./manager.js";
+import {
+  ListAgentsParams,
+  SpawnAgentParams,
+  SubAgentIdParams,
+  WaitAgentParams,
+} from "./manager.js";
 
 /**
  * The root agent's coordination surface (ARCHITECTURE §10):
@@ -55,11 +60,11 @@ export function createSubAgentTools(manager: SubAgentManager): AgentTool<any>[] 
     },
   };
 
-  const list: AgentTool<Record<string, never>, { count: number }> = {
+  const list: AgentTool<typeof ListAgentsParams, { count: number }> = {
     name: "list_agents",
     label: "List sub-agents",
     description: "List every sub-agent with its status, task, and a preview of its report.",
-    parameters: {},
+    parameters: ListAgentsParams,
     execute: async () => {
       const records = manager.list();
       const text =

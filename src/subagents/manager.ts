@@ -221,6 +221,14 @@ async function withTimeout(promise: Promise<void>, ms: number, id: string): Prom
 }
 
 // --- Tool parameter schemas --------------------------------------------------
+/**
+ * `list_agents` takes no arguments, but it still needs an *object-rooted*
+ * schema: providers reject a tool whose root schema isn't `type: "object"`
+ * with an HTTP 400 (`got 'type: null'`), which kills the whole request.
+ * A bare `{}` is therefore not a valid parameter schema.
+ */
+export const ListAgentsParams = Type.Object({});
+
 export const SpawnAgentParams = Type.Object({
   task: Type.String({
     description:
