@@ -5,6 +5,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { parseArgs, HELP_TEXT } from "../src/cli/args.js";
 import { runCli } from "../src/cli/index.js";
 import { parseMockScript } from "../src/model/mock-script.js";
+import { withNonTTY } from "./tty.js";
 
 /**
  * Headless CLI coverage:
@@ -283,13 +284,15 @@ describe("headless -p (real bootstrap, offline mock)", () => {
     expect(fs.readFileSync(target, "utf8")).toBe("via env");
   });
 
-  it("reports the not-yet-implemented TUI instead of hanging", async () => {
+  it("degrades to a headless hint when there is no TTY (instead of hanging)", async () => {
     const project = makeProject();
-    const result = await run(["--model", "mock", "--project-root", project], {
-      cwd: project,
-    });
+    const result = await withNonTTY(() =>
+      run(["--model", "mock", "--project-root", project], { cwd: project }),
+    );
     expect(result.exitCode).toBe(0);
-    expect(result.stderr.join("\n")).toContain("interactive TUI");
+    const stderr = result.stderr.join("\n");
+    expect(stderr).toContain("requires a TTY");
+    expect(stderr).toContain('tinycode -p "prompt"');
   });
 
   it("lists MCP status with --mcp-status and exits without prompting", async () => {

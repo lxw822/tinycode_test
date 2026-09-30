@@ -20,13 +20,19 @@ while keeping the whole thing small enough to read in an afternoon.
 
 ```bash
 npm install
-npm test              # 141 tests, offline, no API key needed
+npm test              # 231 tests, offline, no API key needed
 ```
 
 Run the CLI (offline mock model):
 
 ```bash
 npx tsx src/cli/index.ts -p "hello" --model mock
+```
+
+Drop `-p "<prompt>"` to open the interactive full-screen TUI (needs a real terminal):
+
+```bash
+npx tsx src/cli/index.ts --model mock
 ```
 
 > **Note on `npm run dev`**: npm 11 consumes `-p`/`--model` as its own flags. Either call `tsx`
@@ -51,6 +57,7 @@ node dist/cli/index.js -p "hello" --model mock
 
 | Command                                         | Description                                             |
 | ----------------------------------------------- | ------------------------------------------------------- |
+| `tinycode`                                      | Interactive full-screen TUI (needs a TTY)               |
 | `tinycode -p "<prompt>"`                        | Headless one-shot run (ASK-level operations **denied**) |
 | `tinycode -p "<prompt>" --permission-mode auto` | Allow state-changing operations unattended              |
 | `tinycode --model provider/id \| mock`          | Model reference (`--model mock` = offline)              |
@@ -110,7 +117,8 @@ src/
 ├── session/     JSONL storage, attach/resume, TINYCODE_HOME
 ├── skills/      discovery + frontmatter index (progressive disclosure)
 ├── subagents/   read-only workers: manager + coordination tools
-└── tools/       read, write, edit, bash, grep, find, ls, load_skill
+├── tools/       read, write, edit, bash, grep, find, ls, load_skill
+└── tui/         full-screen session: transcript, editor, status bar, dialog
 ```
 
 ### Tools
@@ -160,8 +168,8 @@ Servers are connected **in parallel** at startup behind a 10s initialize timeout
 is missing, crashes, or hangs records a failed status instead of taking the app down — the other
 servers keep running. Each server's tools join the one tool registry with their JSON Schema passed
 through unchanged; a name that collides with a built-in is qualified as `<server>_<tool>`.
-`tinycode --mcp-status` prints the listing (`/mcp` in the TUI, later), and shutdown closes every
-transport so no child processes leak.
+`tinycode --mcp-status` prints the listing headless (`/mcp` inside the TUI), and shutdown closes
+every transport so no child processes leak.
 
 MCP tools are new, unvetted tools: they get the same default as any unrecognized tool — **ask**
 (and therefore deny in headless `auto`-less runs).
@@ -180,6 +188,34 @@ Harness shutdown aborts every worker so no agent outlives the process.
 Coordination tools follow the same permission rule as MCP: unknown tools are **ask**, never
 auto-allow. A worker's own `read`/`grep`/`find`/`ls` calls are normal read-only calls and get the
 usual in-project allow.
+
+### TUI
+
+`tinycode` with no `-p` opens the full-screen session (alternate screen, `Ctrl+D` to leave):
+
+```
+┌─ transcript — follows the end, arrows scroll ──────────┐
+│ ❯ fix the tests                                        │
+│   ● bash npm test                                      │
+│     ✓ exit 0 · 2.4s                                    │
+│     + const add = (a, b) => a + b                      │
+├─ ◐ 2 tools running ────────────────────────────────────┤
+│ ▌                                                     │
+├─ ● ready · provider/model · ~/proj · ctx ~12.3k ───────┤
+└────────────────────────────────────────────────────────┘
+```
+
+- **Enter** submits · **Esc** aborts a running turn · **Ctrl+C** aborts (a second press while
+  idle quits) · **Ctrl+D** quits · arrows scroll the transcript. While a turn runs, Enter is
+  disabled but the editor keeps accepting text so you can queue your next thought.
+- Slash commands — `/help`, `/mcp`, `/model`, `/clear`, `/compact`, `/exit` — autocomplete from
+  the prompt.
+- ASK-level tools open a centred dialog with **Deny / Allow once / Always allow**. The default
+  selection is **deny** (a stray Enter must not open the write path) and **Esc** cancels to deny.
+  It is reached through a `PermissionBridge` installed at bootstrap — before any TUI object
+  exists — so an ask with no dialog attached still fails closed, exactly like headless `-p`.
+- No TTY (CI, a pipe, a shell without one)? The CLI prints a headless hint and exits 0 instead
+  of hanging.
 
 ## Offline testing
 
@@ -218,11 +254,10 @@ npm run format           # Prettier
 
 ## Status
 
-Core slice complete: tools, permissions, context, sessions, model routing, headless CLI, skills
-(progressive disclosure), MCP servers, read-only sub-agents, and an end-to-end test that drives a
-scripted model through the real loop to fix a broken fixture project.
-
-Planned: interactive TUI.
+Complete: tools, permissions, context, sessions, model routing, headless CLI, skills
+(progressive disclosure), MCP servers, read-only sub-agents, and the interactive full-screen
+TUI — every milestone is driven by offline tests that run a scripted model through the real
+loop, on Windows and Linux.
 
 ## Acknowledgements
 

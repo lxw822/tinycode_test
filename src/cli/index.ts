@@ -7,6 +7,9 @@ import { loadConfig, resolveModelRef, resolvePermissionMode } from "../config/lo
 import { ModelRegistry } from "../model/registry.js";
 import { loadMockScriptFile } from "../model/mock-script.js";
 import { TINYCODE_VERSION } from "../agent/prompt.js";
+import { PermissionBridge } from "../tui/permission-bridge.js";
+import type { TuiApp } from "../tui/app.js";
+import type { Terminal } from "@earendil-works/pi-tui";
 
 /**
  * Headless (`-p`) semantics — the safety story:
@@ -15,6 +18,10 @@ import { TINYCODE_VERSION } from "../agent/prompt.js";
  *   default. Unattended writes require an explicit --permission-mode auto
  *   (or TINYCODE_PERMISSION_MODE=auto). The permission manager's
  *   default-deny branch does the work; the CLI just omits the prompt hook.
+ *
+ * Interactive mode inverts only the presentation: a PermissionBridge is
+ * handed to bootstrap *before* any TUI object exists, then pointed at the
+ * overlay dialog once the app is up. No TTY at all → print and exit 0.
  */
 
 export interface RunResult {
@@ -28,8 +35,18 @@ export interface RunCliOptions {
   cwd?: string;
   stdout?: (line: string) => void;
   stderr?: (line: string) => void;
-  /** Injected harness for in-process tests; bootstrap is skipped when set. */
+  /**
+   * Injected harness for in-process tests; bootstrap is skipped when set — and
+   * with it the permission-prompt wiring, so the caller owns that.
+   */
   harness?: Harness;
+  /**
+   * Injected terminal for the interactive path (tests). When set, the TTY
+   * check is skipped.
+   */
+  terminal?: Terminal;
+  /** Observe the constructed app before it enters the alternate screen. */
+  onTui?: (app: TuiApp) => void;
 }
 
 function lineWriter(sink: ((line: string) => void) | undefined) {
@@ -126,6 +143,26 @@ export async function runCli(options: RunCliOptions): Promise<RunResult> {
     return { text: args.errors.join("\n"), exitCode: 2 };
   }
 
+  const wantsTui = args.mode === "interactive" && !args.mcpStatus;
+
+  // Bail before touching config/session/model state: there is nothing to draw
+  // on and nothing to resume. `-p` is the documented alternative.
+  if (
+    wantsTui &&
+    options.terminal === undefined &&
+    (!process.stdin.isTTY || !process.stdout.isTTY)
+  ) {
+    err(
+      'interactive mode requires a TTY — use `tinycode -p "prompt"` for headless runs ' +
+        "(set TINYCODE_MODEL=mock for offline runs)",
+    );
+    return { text: "", exitCode: 0 };
+  }
+
+  // The bridge must exist before bootstrap: that is where the prompt hook is
+  // injected. It stays deny-only until the TUI points it at the dialog.
+  const bridge = wantsTui ? new PermissionBridge() : undefined;
+
   const projectRoot = args.projectRoot ?? cwd;
   const config = loadConfig(projectRoot);
   for (const warning of config.warnings) err(`warning: ${warning}`);
@@ -161,7 +198,10 @@ export async function runCli(options: RunCliOptions): Promise<RunResult> {
       models,
       permissionMode,
       ...(session ? { session } : {}),
-      // No permissionPrompt here: headless ASK → deny is the design.
+      // Headless runs omit this → ASK degrades to deny (the safety contract).
+      // Interactive runs hand over the bridge, which answers deny until the
+      // TUI attaches the dialog.
+      ...(bridge ? { permissionPrompt: bridge.prompt } : {}),
     }));
 
   if (harness.isMock) {
@@ -212,14 +252,23 @@ export async function runCli(options: RunCliOptions): Promise<RunResult> {
   }
 
   // ---- Interactive mode ---------------------------------------------------
-  // The full-screen TUI is a later milestone; for the core slice the
-  // interactive entry reports what would happen instead of hanging a test.
-  err(
-    'interactive TUI is not part of the core slice yet — use `tinycode -p "prompt"` ' +
-      "(or set TINYCODE_MODEL=mock for offline runs)",
-  );
+  // The TUI module is imported lazily so `-p` runs never pay for it.
+  const { TuiApp } = await import("../tui/app.js");
+  const { ProcessTerminal } = await import("@earendil-works/pi-tui");
+  const terminal = options.terminal ?? new ProcessTerminal();
+
+  const app = new TuiApp({
+    harness,
+    terminal,
+    projectRoot,
+    greeting: `tinycode ${TINYCODE_VERSION} — /help for commands`,
+    ...(bridge ? { bridge } : {}),
+  });
+  options.onTui?.(app);
+
+  const exitCode = await app.run();
   await harness.shutdown();
-  return { text: "", exitCode: 0, harness };
+  return { text: "", exitCode, harness };
 }
 
 /** Process entry: never throws; maps failures to exit codes. */

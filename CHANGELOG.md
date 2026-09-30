@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Interactive TUI** (`src/tui/`): an alternate-screen session laid out as a scrolling
+  transcript over a fixed bottom stack. The transcript is driven straight from the agent event
+  stream — live text deltas, `● tool brief` start lines, `✓ exit 0 · 2.4s` / `✓ +n -m` result
+  lines with per-tool durations and unified-diff previews for `write`/`edit`, red `✗` on
+  failure — while a loader row flips between `thinking…` and `N tools running`, the status bar
+  tracks readiness / model / cwd / context estimate / sub-agents / session, and the prompt
+  editor autocompletes slash commands. `Ctrl+D` quits, `Ctrl+C` aborts a busy turn (a second
+  press while idle quits), `Esc` aborts, arrows scroll; Enter is disabled during a turn but the
+  editor keeps accepting text. ASK-level tools raise a centred **Deny / Allow once / Always
+  allow** dialog — default selection _deny_, `Esc` cancels to deny — wired through a
+  `PermissionBridge` handed to bootstrap before any TUI object exists, so an ask with no dialog
+  attached still fails closed exactly like headless `-p`. With no TTY the CLI prints a headless
+  hint and exits 0 rather than hanging.
 - **Sub-agents** (`src/subagents/manager.ts`): read-only workers as independent Pi `Agent`
   instances with their own transcripts and aborts, a fixed worker prompt, and a tool registry of
   only `read`/`grep`/`find`/`ls` — never `write`/`edit`/`bash` and never the coordination tools
@@ -25,8 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with frontmatter parsing, one-line-per-skill system-prompt index, and a `load_skill` tool that
   resolves names against the discovery map (no path input, auto-allowed as read-only). Malformed
   skills never break boot; project skills shadow user-level ones.
-- Interactive TUI (planned)
-- MCP, sub-agents (planned)
 
 ## [1.0.0] - 2026-09-29
 
