@@ -55,10 +55,22 @@ async function makeHarness(
 }
 
 describe("bootstrap assembly", () => {
-  it("wires all seven built-in tools into one registry", async () => {
+  it("wires the seven built-ins plus four coordination tools into one registry", async () => {
     const { harness } = await makeHarness();
     expect(harness.tools.names().sort()).toEqual(
-      ["bash", "edit", "find", "grep", "ls", "read", "write"].sort(),
+      [
+        "bash",
+        "edit",
+        "find",
+        "grep",
+        "ls",
+        "read",
+        "write",
+        "spawn_agent",
+        "list_agents",
+        "wait_agent",
+        "close_agent",
+      ].sort(),
     );
     expect(harness.isMock).toBe(true);
     await harness.shutdown();

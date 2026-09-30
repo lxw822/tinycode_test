@@ -21,6 +21,8 @@ import {
 import { ToolRegistry } from "./tools/registry.js";
 import { discoverSkills, skillIndex } from "./skills/discovery.js";
 import { McpManager } from "./mcp/client.js";
+import { SubAgentManager, WORKER_SYSTEM_PROMPT } from "./subagents/manager.js";
+import { createSubAgentTools } from "./subagents/tools.js";
 import type { TinyCodeConfig } from "./config/schema.js";
 import { ModelRegistry, type ModelRef } from "./model/registry.js";
 
@@ -62,6 +64,7 @@ export interface Harness {
   runtime: TinyCodeRuntime;
   tools: ToolRegistry;
   mcp: McpManager;
+  subAgents: SubAgentManager;
   session?: SessionManager;
   shutdown(): Promise<void>;
 }
@@ -128,6 +131,28 @@ export async function bootstrapHarness(options: BootstrapOptions): Promise<Harne
   const skills = discoverSkills(projectRoot);
   if (skills.length > 0) tools.register(createLoadSkillTool(skills));
 
+  // --- Sub-agents (read-only workers; ARCHITECTURE §10) --------------------
+  // Registered before MCP so a conflicting MCP name gets qualified instead of
+  // shadowing a coordination tool. Workers are assembled with a *fresh*
+  // registry holding only the read-only subset — they never see spawn_agent,
+  // nor write/edit/bash, which is what makes them safe to fan out to.
+  const summarize = makeDefaultSummarizer(models, model);
+  const subAgents = new SubAgentManager({
+    createRuntime: () =>
+      new TinyCodeRuntime({
+        projectRoot,
+        systemPrompt: WORKER_SYSTEM_PROMPT,
+        model,
+        streamFn: models.collection.streamSimple.bind(models.collection),
+        tools: makeWorkerToolRegistry(projectRoot),
+        permissions,
+        contextManager,
+        summarize,
+        // Workers never touch the session log: the root owns it.
+      }),
+  });
+  for (const tool of createSubAgentTools(subAgents)) tools.register(tool);
+
   // --- MCP (connect in parallel; failures recorded, never fatal) -----------
   // Registered after the built-ins so a conflicting MCP name gets the
   // `<server>_<tool>` qualification instead of shadowing a core tool.
@@ -142,8 +167,6 @@ export async function bootstrapHarness(options: BootstrapOptions): Promise<Harne
     memory,
     skills: skillIndex(skills),
   });
-
-  const summarize = makeDefaultSummarizer(models, model);
 
   // --- Runtime (five hooks) ------------------------------------------------
   const runtime = new TinyCodeRuntime({
@@ -181,12 +204,26 @@ export async function bootstrapHarness(options: BootstrapOptions): Promise<Harne
     runtime,
     tools,
     mcp,
+    subAgents,
     session,
     async shutdown() {
-      // Subsystems with live children (sub-agents) plug in here later.
+      subAgents.shutdown();
       await mcp.shutdown();
     },
   };
+}
+
+/**
+ * The worker tool subset: read-only project inspection, nothing else.
+ * Deliberately omits write/edit/bash and all coordination tools — a worker
+ * can look but never touch, and can never spawn its own children.
+ */
+export function makeWorkerToolRegistry(projectRoot: string): ToolRegistry {
+  const registry = new ToolRegistry();
+  for (const factory of [createReadTool, createGrepTool, createFindTool, createLsTool]) {
+    registry.register(factory(projectRoot));
+  }
+  return registry;
 }
 
 /** Title policy: first user message, first line, trimmed. */

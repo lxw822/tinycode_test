@@ -42,6 +42,7 @@ export function buildSystemPrompt(input: SystemPromptInput): string {
       "- Edits must match existing text exactly (copy it); after editing, verify with read or a test run.",
       "- Non-zero exit codes from bash are data, not failures: read stdout/stderr and decide.",
       "- When a tool call is blocked by permissions, report the reason to the user; do not retry the same blocked action in a loop.",
+      "- For long or parallel read-only research, spawn_agent (max 3) and collect with wait_agent; workers cannot modify files.",
       "- Keep replies concise: state what you did and what you verified.",
     ].join("\n"),
   );

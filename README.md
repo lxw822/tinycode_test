@@ -109,17 +109,19 @@ src/
 ├── permissions/ classifier, rules, manager (3-layer verdicts)
 ├── session/     JSONL storage, attach/resume, TINYCODE_HOME
 ├── skills/      discovery + frontmatter index (progressive disclosure)
+├── subagents/   read-only workers: manager + coordination tools
 └── tools/       read, write, edit, bash, grep, find, ls, load_skill
 ```
 
 ### Tools
 
-| Tool                      | Notes                                                           |
-| ------------------------- | --------------------------------------------------------------- |
-| `read` / `write` / `edit` | Path-guarded: `realpath` checked on both sides, outputs use `/` |
-| `bash`                    | Timeout + abort handled by process-tree kill (Windows-aware)    |
-| `grep` / `find` / `ls`    | Read-only project inspection                                    |
-| `load_skill`              | Loads a skill by name (never a path) — see below                |
+| Tool                                                         | Notes                                                    |
+| ------------------------------------------------------------ | -------------------------------------------------------- |
+| `read` / `write` / `edit`                                    | Path-guarded: `realpath` checked on both sides, `/` out  |
+| `bash`                                                       | Timeout + abort handled by process-tree kill (Win-aware) |
+| `grep` / `find` / `ls`                                       | Read-only project inspection                             |
+| `load_skill`                                                 | Loads a skill by name (never a path) — see below         |
+| `spawn_agent` / `list_agents` / `wait_agent` / `close_agent` | Sub-agent coordination — see below                       |
 
 Every tool resolves paths against the project root and rejects escapes (symlinks included).
 
@@ -164,6 +166,21 @@ transport so no child processes leak.
 MCP tools are new, unvetted tools: they get the same default as any unrecognized tool — **ask**
 (and therefore deny in headless `auto`-less runs).
 
+### Sub-agents
+
+`spawn_agent` starts a **read-only worker**: an independent Pi `Agent` with its own transcript,
+its own abort, a fixed worker prompt, and a tool registry built from just `read`/`grep`/`find`/
+`ls` — no `write`/`edit`/`bash`, and never the coordination tools, so a worker can look but never
+touch and can never spawn its own children. Hard limits prevent swarms: **max 3 concurrent**;
+`spawn_agent` refuses beyond the cap with instructions to `wait_agent` or `close_agent` first.
+The root collects results with `wait_agent` (the worker's final assistant message, verbatim as a
+report) and can abort with `close_agent`. Workers never touch the session log — the root owns it.
+Harness shutdown aborts every worker so no agent outlives the process.
+
+Coordination tools follow the same permission rule as MCP: unknown tools are **ask**, never
+auto-allow. A worker's own `read`/`grep`/`find`/`ls` calls are normal read-only calls and get the
+usual in-project allow.
+
 ## Offline testing
 
 Tests never touch the network. `ModelRegistry.enableMock()` registers Pi's scripted **faux**
@@ -202,10 +219,10 @@ npm run format           # Prettier
 ## Status
 
 Core slice complete: tools, permissions, context, sessions, model routing, headless CLI, skills
-(progressive disclosure), MCP servers, and an end-to-end test that drives a scripted model through
-the real loop to fix a broken fixture project.
+(progressive disclosure), MCP servers, read-only sub-agents, and an end-to-end test that drives a
+scripted model through the real loop to fix a broken fixture project.
 
-Planned: interactive TUI, sub-agents.
+Planned: interactive TUI.
 
 ## Acknowledgements
 

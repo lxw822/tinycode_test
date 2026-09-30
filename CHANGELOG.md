@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Sub-agents** (`src/subagents/manager.ts`): read-only workers as independent Pi `Agent`
+  instances with their own transcripts and aborts, a fixed worker prompt, and a tool registry of
+  only `read`/`grep`/`find`/`ls` — never `write`/`edit`/`bash` and never the coordination tools
+  (no nesting, no swarm). Hard cap of 3 concurrent with a recovery hint on refusal; root
+  coordinates via `spawn_agent` / `list_agents` / `wait_agent` (final assistant message as report,
+  with timeout) / `close_agent`; `shutdown()` aborts every worker so none outlives the process.
+  Coordination tools stay under the unknown-tool **ask** rule, like MCP.
 - **MCP** (`src/mcp/client.ts`): parallel stdio connections with a 10s initialize timeout,
   failure isolation (a dead server records a status entry instead of crashing), JSON Schema
   passed through to the tool registry with `<server>_<tool>` collision qualification, child
