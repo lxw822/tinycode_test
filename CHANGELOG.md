@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **MCP** (`src/mcp/client.ts`): parallel stdio connections with a 10s initialize timeout,
+  failure isolation (a dead server records a status entry instead of crashing), JSON Schema
+  passed through to the tool registry with `<server>_<tool>` collision qualification, child
+  stderr captured into the status entry, idempotent shutdown with no leaked processes, and a
+  `--mcp-status` CLI listing. MCP tools default to ASK like any unrecognized tool.
 - **Skills** (`.tinycode/skills/<name>/SKILL.md`, user-level mirror in the data home): discovery
   with frontmatter parsing, one-line-per-skill system-prompt index, and a `load_skill` tool that
   resolves names against the discovery map (no path input, auto-allowed as read-only). Malformed

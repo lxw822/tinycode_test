@@ -123,6 +123,11 @@ describe("parseArgs", () => {
     expect(parseArgs(["--help"]).mode).toBe("help");
     expect(parseArgs(["-v"]).mode).toBe("version");
   });
+
+  it("parses --mcp-status", () => {
+    expect(parseArgs(["--mcp-status"]).mcpStatus).toBe(true);
+    expect(parseArgs([]).mcpStatus).toBe(false);
+  });
 });
 
 describe("parseMockScript", () => {
@@ -285,5 +290,38 @@ describe("headless -p (real bootstrap, offline mock)", () => {
     });
     expect(result.exitCode).toBe(0);
     expect(result.stderr.join("\n")).toContain("interactive TUI");
+  });
+
+  it("lists MCP status with --mcp-status and exits without prompting", async () => {
+    const project = makeProject();
+    // Run the repo's own fixture in place: a copy in tmp could not resolve
+    // @modelcontextprotocol/sdk (no node_modules above it).
+    const server = path.join(import.meta.dirname, "fixtures", "mcp-server.mjs");
+    fs.mkdirSync(path.join(project, ".tinycode"), { recursive: true });
+    fs.writeFileSync(
+      path.join(project, ".tinycode", "config.json"),
+      JSON.stringify({ mcpServers: { fixture: { command: process.execPath, args: [server] } } }),
+    );
+
+    const result = await run(["--mcp-status", "--model", "mock", "--project-root", project], {
+      cwd: project,
+    });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.join("\n")).toContain("fixture: connected, 3 tools");
+  });
+
+  it("reports a broken MCP server as failed instead of crashing", async () => {
+    const project = makeProject();
+    fs.mkdirSync(path.join(project, ".tinycode"), { recursive: true });
+    fs.writeFileSync(
+      path.join(project, ".tinycode", "config.json"),
+      JSON.stringify({ mcpServers: { broken: { command: "no-such-binary-tinycode" } } }),
+    );
+
+    const result = await run(["--mcp-status", "--model", "mock", "--project-root", project], {
+      cwd: project,
+    });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.join("\n")).toContain("broken: failed");
   });
 });

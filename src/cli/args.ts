@@ -11,6 +11,8 @@
 
 export interface CliArgs {
   mode: "interactive" | "print" | "help" | "version";
+  /** Connect configured MCP servers, print their status, and exit. */
+  mcpStatus: boolean;
   prompt?: string;
   model?: string;
   permissionMode?: "ask" | "auto";
@@ -25,6 +27,7 @@ export function parseArgs(argv: string[]): CliArgs {
   const args: CliArgs = {
     mode: "interactive",
     continue: false,
+    mcpStatus: false,
     errors: [],
   };
 
@@ -85,6 +88,9 @@ export function parseArgs(argv: string[]): CliArgs {
         }
         break;
       }
+      case "--mcp-status":
+        args.mcpStatus = true;
+        break;
       case "-h":
       case "--help":
         args.mode = "help";
@@ -120,6 +126,7 @@ Options:
   -c, --continue          Resume the newest session of this directory
       --session <id>      Resume a specific session
       --project-root <p>  Operate on <p> instead of the current directory
+      --mcp-status        Connect configured MCP servers, list status, and exit
   -h, --help              Show this help
   -v, --version           Show version
 

@@ -168,6 +168,14 @@ export async function runCli(options: RunCliOptions): Promise<RunResult> {
     err("MOCK mode: scripted offline model, no network in use");
   }
 
+  // ---- MCP status mode ----------------------------------------------------
+  if (args.mcpStatus) {
+    const status = harness.mcp.formatStatus();
+    out(status);
+    await harness.shutdown();
+    return { text: status, exitCode: 0, harness };
+  }
+
   // ---- One-shot mode ------------------------------------------------------
   if (args.mode === "print") {
     if (!args.prompt) {

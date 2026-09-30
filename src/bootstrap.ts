@@ -20,6 +20,7 @@ import {
 } from "./tools/index.js";
 import { ToolRegistry } from "./tools/registry.js";
 import { discoverSkills, skillIndex } from "./skills/discovery.js";
+import { McpManager } from "./mcp/client.js";
 import type { TinyCodeConfig } from "./config/schema.js";
 import { ModelRegistry, type ModelRef } from "./model/registry.js";
 
@@ -60,6 +61,7 @@ export interface Harness {
   contextManager: ContextManager;
   runtime: TinyCodeRuntime;
   tools: ToolRegistry;
+  mcp: McpManager;
   session?: SessionManager;
   shutdown(): Promise<void>;
 }
@@ -126,6 +128,12 @@ export async function bootstrapHarness(options: BootstrapOptions): Promise<Harne
   const skills = discoverSkills(projectRoot);
   if (skills.length > 0) tools.register(createLoadSkillTool(skills));
 
+  // --- MCP (connect in parallel; failures recorded, never fatal) -----------
+  // Registered after the built-ins so a conflicting MCP name gets the
+  // `<server>_<tool>` qualification instead of shadowing a core tool.
+  const mcp = new McpManager({ servers: config.mcpServers ?? {} });
+  await mcp.connect(tools);
+
   // --- System prompt -------------------------------------------------------
   const memory = readProjectMemory(projectRoot);
   const systemPrompt = buildSystemPrompt({
@@ -172,9 +180,11 @@ export async function bootstrapHarness(options: BootstrapOptions): Promise<Harne
     contextManager,
     runtime,
     tools,
+    mcp,
     session,
     async shutdown() {
-      // Subsystems with live children (MCP, sub-agents) plug in here later.
+      // Subsystems with live children (sub-agents) plug in here later.
+      await mcp.shutdown();
     },
   };
 }

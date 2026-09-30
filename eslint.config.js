@@ -13,6 +13,8 @@ export default tseslint.config(
       // The broken-project fixture is intentionally invalid CommonJS — it is
       // the "before" state the E2E test drives the agent to fix.
       "fixtures/**",
+      // Standalone test servers/helpers (plain JS, run as child processes).
+      "tests/fixtures/**",
     ],
   },
   js.configs.recommended,

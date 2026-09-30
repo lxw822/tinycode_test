@@ -104,6 +104,7 @@ src/
 ├── cli/         argument parsing + headless/interactive entry
 ├── config/      layered config (flags > env > file)
 ├── context/     truncation, artifacts, compaction
+├── mcp/         stdio MCP clients, tool adaptation, status
 ├── model/       registry (resolution order), offline mock scripts
 ├── permissions/ classifier, rules, manager (3-layer verdicts)
 ├── session/     JSONL storage, attach/resume, TINYCODE_HOME
@@ -140,6 +141,28 @@ Only the `name: description` line reaches the system prompt. When the model judg
 relevant it calls `load_skill(name)` and the full body arrives as a tool result — unused skills
 cost zero context tokens. Discovery never lets a malformed file break boot, and the tool resolves
 names against the discovery-time map, so there is no path to traverse.
+
+### MCP
+
+Add stdio servers to `.tinycode/config.json`:
+
+```json
+{
+  "mcpServers": {
+    "github": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-github"] }
+  }
+}
+```
+
+Servers are connected **in parallel** at startup behind a 10s initialize timeout. A server that
+is missing, crashes, or hangs records a failed status instead of taking the app down — the other
+servers keep running. Each server's tools join the one tool registry with their JSON Schema passed
+through unchanged; a name that collides with a built-in is qualified as `<server>_<tool>`.
+`tinycode --mcp-status` prints the listing (`/mcp` in the TUI, later), and shutdown closes every
+transport so no child processes leak.
+
+MCP tools are new, unvetted tools: they get the same default as any unrecognized tool — **ask**
+(and therefore deny in headless `auto`-less runs).
 
 ## Offline testing
 
@@ -179,10 +202,10 @@ npm run format           # Prettier
 ## Status
 
 Core slice complete: tools, permissions, context, sessions, model routing, headless CLI, skills
-(progressive disclosure), and an end-to-end test that drives a scripted model through the real
-loop to fix a broken fixture project.
+(progressive disclosure), MCP servers, and an end-to-end test that drives a scripted model through
+the real loop to fix a broken fixture project.
 
-Planned: interactive TUI, MCP, sub-agents.
+Planned: interactive TUI, sub-agents.
 
 ## Acknowledgements
 
